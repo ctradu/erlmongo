@@ -7,7 +7,7 @@ EXTRA_DIST = \
 
 erlmongohdrdir = $(ERLANG_INSTALL_LIB_DIR_erlmongo)/include
 dist_erlmongohdr_DATA = \
-	src/erlmongo.hrl
+	include/erlmongo.hrl
 
 erlmongobindir = $(ERLANG_INSTALL_LIB_DIR_erlmongo)/ebin
 

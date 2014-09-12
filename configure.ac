@@ -1,7 +1,7 @@
 AC_PREREQ(2.57)
 AC_INIT(erlmongo, 0.0.9, sergej.jurecko@wpn.tv)
 AC_CONFIG_AUX_DIR(config)
-AC_CONFIG_SRCDIR([src/erlmongo.hrl])
+AC_CONFIG_SRCDIR([include/erlmongo.hrl])
 AM_INIT_AUTOMAKE(foreign tar-ustar)
 AC_ERLANG_PATH_ERL
 AC_ERLANG_PATH_ERLC
