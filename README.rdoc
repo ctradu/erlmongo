@@ -4,6 +4,13 @@ Erlmongo is a pretty complete Erlang driver for mongodb.
 
 It supports records and proplists as datatypes. Strings can be lists or binaries, but strings received from mongodb (as a result of find) will be binaries.
 
+== Dependencies
+
+Lager - for logging
+
+
+== How it works
+
 Because of the way records work in Erlang, you need to call mongoapi:recinfo/2 before using any record, or define each record in erlmongo.hrl.
 
 When you're using a selector (picking which fields in the document you wish to get from mongodb), they have to be in the same sequence as they were defined in the record.

@@ -28,7 +28,7 @@
 rec() ->
 	receive
 		X ->
-			io:format("~p~n", [X])
+			lager:debug("~p~n", [X])
 		after 1000 ->
 			done
 	end.
@@ -155,8 +155,8 @@ exec_getmore(Pool,Col, C) ->
 				ok ->
 					receive
 						{query_result, _Src, <<_:32,CursorID:64/little, _From:32/little, _NDocs:32/little, Result/binary>>} ->
-							% io:format("cursor ~p from ~p ndocs ~p, ressize ~p ~n", [_CursorID, _From, _NDocs, byte_size(Result)]),
-							% io:format("~p~n", [Result]),
+							lager:debug("cursor ~p from ~p ndocs ~p, ressize ~p ~n", [_CursorID, _From, _NDocs, byte_size(Result)]),
+							lager:debug("~p~n", [Result]),
 							case CursorID of
 								0 ->
 									C#cursor.pid ! {stop},
@@ -336,7 +336,7 @@ handle_cast({delete_connection, Pool}, P) ->
 	self() ! {save_connections},
 	{noreply, P};
 handle_cast({print_info}, P) ->
-	io:format("~p ~p~n~p~n", [self(),get(),?R2P(P)]),
+	lager:info("~p ~p ~p", [self(),get(),?R2P(P)]),
 	{noreply, P};
 handle_cast(_, P) ->
 	{noreply, P}.
@@ -439,7 +439,7 @@ handle_info({reconnect, Pool}, P) ->
 	handle_cast({start_connection, Pool}, P);
 handle_info({'EXIT', PID,W}, P) ->
 	?DBG("conndied ~p ~p", [PID,get(get(PID))]),
-	% io:format("condied ~p~n", [{PID,_W}]),
+	lager:warning("connection died ~p~n", [{PID,_W}]),
 	case get(PID) of
 		undefined ->
 			true;
@@ -465,8 +465,7 @@ handle_info({save_connections}, P) ->
 	{noreply, P};
 handle_info({query_result, Src, <<_:20/binary, Res/binary>>}, P) ->
 	PI = get(get(Src)),
-	?DBG("query_result ~p~n~p~n", [get(Src), PI]),
-	% io:format("~p~n", ["RES"]),
+	lager:debug("query_result ~p~n~p~n", [get(Src), PI]),
 	case catch mongodb:decode(Res) of
 		[Obj] ->
 			case proplists:get_value(<<"ismaster">>,Obj) of
@@ -510,7 +509,7 @@ handle_info({query_result, Src, _}, P) ->
 	Src ! {stop},
 	{noreply, P};
 handle_info(_X, P) ->
-	io:format("~p~n", [_X]),
+	lager:notice("Unidentified message received ~p while in ~p", [_X, P]),
 	{noreply, P}.
 
 
@@ -594,31 +593,31 @@ gfs_proc(#gfs_state{mode = read} = P, Buf) ->
 				_ ->
 					N = byte_size(Buf)
 			end,
-			% io:format("reading ~p, ~p~n", [N, byte_size(Buf)]),
+			lager:debug("reading ~p, ~p~n", [N, byte_size(Buf)]),
 			case true of
 				_ when N =< byte_size(Buf) ->
-					% io:format("cached ~p ~p ~n", [N, byte_size(Buf)]),
+					lager:debug("cached ~p ~p ~n", [N, byte_size(Buf)]),
 					<<Ret:N/binary, Rem/binary>> = Buf,
 					Source ! {gfs_bytes, Ret},
 					gfs_proc(P, Rem);
 				_ ->
 					GetChunks = ((N - byte_size(Buf)) div CSize) + 1,
-					% io:format("Finding buf ~p, getchunks ~p, skip ~p~n", [byte_size(Buf), GetChunks,P#gfs_state.nchunk]),
+					lager:debug("Finding buf ~p, getchunks ~p, skip ~p~n", [byte_size(Buf), GetChunks,P#gfs_state.nchunk]),
 					Quer = #search{ndocs = GetChunks, nskip = 0,
 								   criteria = mongodb:encode([{<<"files_id">>, (P#gfs_state.file)#gfs_file.docid},
 															  {<<"n">>, {in,{gte, P#gfs_state.nchunk},{lte, P#gfs_state.nchunk + GetChunks}}}]),
 								   field_selector = get(field_selector)},
-					% io:format("find ~p~n", [{P#gfs_state.pool,P#gfs_state.collection}]),
+					lager:debug("find ~p~n", [{P#gfs_state.pool,P#gfs_state.collection}]),
 					case mongodb:exec_find(P#gfs_state.pool,<<(P#gfs_state.collection)/binary, ".chunks">>, Quer) of
 						not_connected ->
 							Source ! not_connected,
 							gfs_proc(P,Buf);
 						<<>> ->
-							% io:format("Noresult~n"),
+							lager:debug("Using the pool ~p on collection ~p we got No result on query ~p",[P#gfs_state.pool, P#gfs_state.collection, Quer]),
 							Source ! eof,
 							gfs_proc(P,Buf);
 						ResBin ->
-							% io:format("Result ~p~n", [ResBin]),
+							lager:debug("The resulting binary is ~p", [ResBin]),
 							Result = chunk2bin(mongodb:decode(ResBin), <<>>),
 							case true of
 								_ when byte_size(Result) + byte_size(Buf) =< N ->
